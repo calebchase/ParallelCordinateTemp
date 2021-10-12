@@ -1,7 +1,7 @@
-import { drawSinDataFromX } from "./drawSinDataX";
+import { drawX } from "./drawX";
 
 function main() {
-  drawSinDataFromX();
+  drawX();
 }
 
 main();

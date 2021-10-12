@@ -173,7 +173,7 @@ let CreateLineStrips = async (lineStrips: Float32Array) => {
   device.queue.submit([commandEncoder.finish()]);
 };
 
-export function drawSinDataFromX() {
+export function drawX() {
   let urlToFloatFile = "./xData.txt";
   let request = new XMLHttpRequest();
 
