@@ -1,3 +1,5 @@
+import * as data from "./nutrients.json";
+
 function CreateGPUBufferFloat32(device: GPUDevice, data: Float32Array) {
   let buffer = device.createBuffer({
     size: data.byteLength,
@@ -173,7 +175,11 @@ let CreateLineStrips = async (lineStrips: Float32Array) => {
   device.queue.submit([commandEncoder.finish()]);
 };
 
+
+
 export function drawX() {
+
+ 
   let urlToFloatFile = "./xData.txt";
   let request = new XMLHttpRequest();
 
@@ -182,7 +188,7 @@ export function drawX() {
 
   request.onload = function () {
     let data = new Float32Array(this.response);
-
+    console.log(data);
     CreateLineStrips(data);
   };
   request.send();

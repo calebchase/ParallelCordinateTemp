@@ -1,6 +1,4 @@
-function getNutrients()
-{
-  let data = [
+[
     {
       "name": "Beverage, instant breakfast powder, chocolate, not reconstituted",
       "group": "Dairy and Egg Products",
@@ -137467,80 +137465,4 @@ function getNutrients()
       "monounsat (g)": 5.031,
       "polyunsat (g)": 5.328
     }
-  ];
-  var count = 100;
-  var values = [];
-  var max = Object.values(data[0])
-  max = max.slice(2,max.length);
-
-  for (var i = 0;  i < count; i++)
-  {
-    var temp = Object.values(data[i])
-    var test = temp.slice(2,temp.length);
-
-    for (var j = 0; i < test.length; i++)
-    {
-      if(test[j] !== null && test[j] !== undefined)
-      {
-        max[j] = Math.max(test[j], max[j]);
-      }
-     
-    }
-  }
-    console.log("max",max);
-  for (var i = 0;  i< count; i++)
-  {
-    var temp = Object.values(data[i])
-    
-    var test = temp.slice(2,temp.length);
-    var j = - (test.length / 2);
-    var index = 0;
-    test.forEach((val) => 
-    {
-      var temp = []
-      values.push(j/(test.length/2));
-      var new_val = val/max[index];
-      values.push(new_val);
-      j++;
-      index++;
-    })
-    values.push(undefined);
-    values.push(undefined);
-  }
-
-  return values;
-}
-function getSinPoints(stepDensity, total) {
-  let points = [];
-  let start = -Math.PI;
-  let end = Math.PI;
-
-  let step = (2 * Math.PI) / stepDensity;
-  end += 0.0001;
-
-  for (let count = 1; count <= total; count++) {
-    for (let i = start; i <= end; i += step) {
-      points.push(i / Math.PI);
-      points.push(Math.floor(Math.random() * 6));
-      console.log(Math.floor(Math.random() * 5));
-    }
-    points.push(undefined);
-    points.push(undefined);
-  }
-  return points;
-}
-
-let fs = require("fs");
-let wstream = fs.createWriteStream("../dist/xData.txt");
-
-let data = getNutrients();
-console.log(data);
-
-let buffer = new Buffer.alloc(data.length * 4);
-
-for (let i = 0; i < data.length; i++) {
-  buffer.writeFloatLE(data[i], i * 4);
-}
-
-wstream.write(buffer);
-wstream.end();
+  ]
