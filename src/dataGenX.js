@@ -17,25 +17,25 @@ function getNutrients() {
     filters[0] = 1.0;
 
     for (var i = 0; i < count; i++) {
-      var temp = Object.values(data[i])
-      var test = temp.slice(2, temp.length);
+      var row = Object.values(data[i])
+      var row = row.slice(2, row.length);
 
-      for (var j = 0; j < test.length; j++) {
-        if (test[j] !== null && test[j] !== undefined) {
-          max[j] = Math.max(test[j], max[j]);
+      for (var j = 0; j < row.length; j++) {
+        if (row[j] !== null && row[j] !== undefined) {
+          max[j] = Math.max(row[j], max[j]);
         }
 
       }
     }
     console.log("max", max);
     for (var i = 0; i < count; i++) {
-      var temp = Object.values(data[i])
-      var test = temp.slice(2, temp.length);
+      var row = Object.values(data[i])
+      var row = row.slice(2, row.length);
       var j = -1 * (max.length/2) ;
       var index = 0;
       var valid = true;
   
-      test.forEach((val) =>
+      row.forEach((val) =>
       {
         if (filters[index] < val)
         {
@@ -49,8 +49,8 @@ function getNutrients() {
       {
 
       
-      test.forEach((val) => {
-        var temp = []
+      row.forEach((val) => {
+        var row = []
         values.push((j / (max.length)) * w);
         var new_val = val / max[index];
         values.push(new_val * h);
@@ -61,8 +61,6 @@ function getNutrients() {
       values.push(undefined);
     }
     }
-
-    console.log(values);
     writeData(values);
   });
 
