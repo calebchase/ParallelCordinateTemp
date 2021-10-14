@@ -1,5 +1,22 @@
 import * as data from "./nutrients.json";
 
+var nutrientValue = 1.0;
+var groupValue = 1.0;
+var protien = 1.0;
+var calcium = 1.0;
+var sodium = 1.0;
+var fiber = 1.0;
+var vitaminc = 1.0;
+var potassium = 1.0;
+var carbohydrate = 1.0;
+var sugars = 1.0;
+var fat = 1.0;
+var water = 1.0;
+var calories = 1.0;
+var saturated = 1.0;
+var monounsat = 1.0;
+var polyunsat = 1.0;
+
 function CreateGPUBufferFloat32(device: GPUDevice, data: Float32Array) {
   let buffer = device.createBuffer({
     size: data.byteLength,
@@ -56,7 +73,8 @@ function shaders() {
     output.Position = pos;
     output.vColor = color;
 
-    output.Position.y = pos.y / 4.0 - .625;
+  
+    output.Position.y = pos.y / 4.0 - 1.0;
     return output;
   }`;
 
@@ -143,7 +161,7 @@ let CreateLineStrips = async (lineStrips: Float32Array) => {
   let gpu = await InitGPU();
   let device = gpu.device;
 
-  let colorData = new Float32Array([0, 1, 0]);
+  let colorData = new Float32Array([.5, .5, .5]);
 
   let commandEncoder = device.createCommandEncoder();
   let textureView = gpu.context.getCurrentTexture().createView();
@@ -153,7 +171,7 @@ let CreateLineStrips = async (lineStrips: Float32Array) => {
       {
         view: textureView,
         //background color
-        loadValue: { r: 0.2, g: 0.2, b: 0.2, a: 1 },
+        loadValue: { r: 1.0, g: 1.0, b: 1.0, a: 1 },
         storeOp: "store",
       },
     ],
@@ -175,11 +193,8 @@ let CreateLineStrips = async (lineStrips: Float32Array) => {
   device.queue.submit([commandEncoder.finish()]);
 };
 
-
-
 export function drawX() {
-
- 
+  console.log("drawing");
   let urlToFloatFile = "./xData.txt";
   let request = new XMLHttpRequest();
 
