@@ -1,8 +1,9 @@
 let fs = require("fs");
 function getNutrients() {
 
-  var w = 1;
-  var h = 1;
+  // Help scaling for making it full width need to figure out what exact values are the best
+  var w = 2.5;
+  var h = 7.5;
 
   fs.readFile('./nutrients.json', (err, vals) => {
     var values = [];

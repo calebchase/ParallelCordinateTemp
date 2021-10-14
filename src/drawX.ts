@@ -202,9 +202,27 @@ export function drawX() {
   request.responseType = "arraybuffer";
 
   request.onload = function () {
-    let data = new Float32Array(this.response);
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+
+    console.log(w,h);
+    
+    var data = this.response;
+    
+    for (var i = 0; i < data.length; i++)
+    {
+      if (i % 2 == 0)
+      {
+        data[i] = data[i] * w;
+      }
+      else
+      {
+        data[i] = data[i] * h;
+      }
+    }
+    var results = new Float32Array(data);
     console.log(data);
-    CreateLineStrips(data);
+    CreateLineStrips(results);
   };
   request.send();
 }

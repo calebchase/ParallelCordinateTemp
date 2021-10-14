@@ -179,10 +179,24 @@ export function drawSinData() {
   request.responseType = "arraybuffer";
 
   request.onload = function () {
-    let data = new Float32Array(this.response);
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var data = this.response;
+    for (var i = 0; i < data.length; i++)
+    {
+      if (i % 2 == 0)
+      {
+        data[i] = data[i] * w;
+      }
+      else
+      {
+        data[i] = data[i] * h;
+      }
+    }
+    var results = new Float32Array(data);
 
     window.onload = () => {
-      CreateLineStrips(data);
+      CreateLineStrips(results);
     };
   };
   request.send();
