@@ -2,8 +2,9 @@
 <head>
    <meta charset="utf-8">
    <meta name="description" content="">
+   <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
    <meta name="viewport" content="width=device-width, initial-scale=1">
-
+   <script type="module" src="./dataGen.js"></script>
    <script src="main.bundle.js"></script>
    <style>
       body {
@@ -13,14 +14,25 @@
       }
 
       #canvas-webgpu {
-          position: absolute;
           width: 100%;
-          height: 100vh;
+          height: 100%;
+      }
+      #filler
+      {
+            display: flex;
+            align-items: center;
+            justify-items:center;
+            height: 100vh;
+            width:100vw;
       }
   </style>
 </head>
 <body>
-      <div>
+      <div id="filters" class="bg-transparent">
+            <label for="vol">Volume</label>
+      </div>
+      
+      <div id="filler">
             <canvas id="canvas-webgpu"></canvas>
       </div>
      

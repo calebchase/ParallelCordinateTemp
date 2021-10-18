@@ -1,4 +1,5 @@
 let fs = require("fs");
+console.log("dataGenX.js");
 function getNutrients() {
 
   // Help scaling for making it full width need to figure out what exact values are the best
@@ -12,6 +13,7 @@ function getNutrients() {
     var count = data.length * .25;
     var max = Object.values(data[0])
     max = max.slice(2, max.length);
+    console.log("columns", Object.keys(data[0]));
 
     var filters = Array(max.lenght).fill(0);
     filters[0] = 1.0;
