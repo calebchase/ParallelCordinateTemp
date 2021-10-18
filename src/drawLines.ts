@@ -1,21 +1,16 @@
-import * as data from "./nutrients.json";
-
-var nutrientValue = 1.0;
-var groupValue = 1.0;
-var protien = 1.0;
-var calcium = 1.0;
-var sodium = 1.0;
-var fiber = 1.0;
-var vitaminc = 1.0;
-var potassium = 1.0;
-var carbohydrate = 1.0;
-var sugars = 1.0;
-var fat = 1.0;
-var water = 1.0;
-var calories = 1.0;
-var saturated = 1.0;
-var monounsat = 1.0;
-var polyunsat = 1.0;
+var filtersAdded = false;
+var filters = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+var names = [
+  'protein (g)', 'calcium (g)',
+  'sodium (g)', 'fiber (g)',
+  'vitaminc (g)', 'potassium (g)',
+  'carbohydrate (g)', 'sugars (g)',
+  'fat (g)', 'water (g)',
+  'calories', 'saturated (g)',
+  'monounsat (g)', 'polyunsat (g)']
+var max: Array<number> = [
+  82.4, 2.24, 38.758, 53.1, 0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6, 83.689, 74.623];
+var data;
 
 function CreateGPUBufferFloat32(device: GPUDevice, data: Float32Array) {
   let buffer = device.createBuffer({
@@ -38,12 +33,51 @@ function CreateGPUBufferIndirect(device: GPUDevice, data: Uint32Array) {
   buffer.unmap();
   return buffer;
 }
+function createFilter(name: string, max: number, index: number) {
+  var filters_div = document.getElementById("filters");
+  var filter = document.createElement("input");
+  filter.type = ("range");
+  filter.id = name;
+  filter.name = name;
+  filter.min = "0";
+  filter.value = "0";
+  filter.max = max.toString();
+  filter.onchange = function (e) {
+    filters[index] = Number.parseFloat(filter.value);
+    drawX();
+  }
 
+  filters_div?.appendChild(filter);
+
+  var label = document.createElement("label");
+
+  label.innerHTML = name;
+
+
+  filters_div?.appendChild(label);
+
+
+}
+function createForms() {
+
+
+  for (var i: number = 0; i < max.length; i++) {
+    createFilter(names[i], max[i], i);
+  }
+
+  filtersAdded = true;
+}
 async function InitGPU() {
   let canvas = document.getElementById("canvas-webgpu") as HTMLCanvasElement;
   let adapter = await navigator.gpu?.requestAdapter();
   let device = (await adapter?.requestDevice()) as GPUDevice;
   let context = canvas.getContext("webgpu") as unknown as GPUCanvasContext;
+  let filters_div = document.getElementById("filters");
+
+  if (!filtersAdded) {
+    createForms();
+  }
+
 
   let devicePixelRatio = window.devicePixelRatio || 1;
   let size = [
@@ -193,35 +227,92 @@ let CreateLineStrips = async (lineStrips: Float32Array) => {
   device.queue.submit([commandEncoder.finish()]);
 };
 
+
+function isValidLine() {
+
+  return true;
+}
+
+function cleanData(data: Array<JSON>) {
+
+  // Help scaling for making it full width need to figure out what exact values are the best
+  var w = 2.0;
+  var h = 7.5;
+  var values = [];
+  var count = data.length * .25;
+  var max = Object.values(data[0])
+  max = max.slice(2, max.length);
+  console.log("columns", Object.keys(data[0]));
+
+  for (var i = 0; i < count; i++) {
+    var row = Object.values(data[i])
+    var row = row.slice(2, row.length);
+
+    for (var j = 0; j < row.length; j++) {
+      if (row[j] !== null && row[j] !== undefined) {
+        max[j] = Math.max(row[j], max[j]);
+      }
+
+    }
+  }
+  console.log("max", max);
+  for (var i = 0; i < count; i++) {
+    var row = Object.values(data[i])
+    var row = row.slice(2, row.length);
+    var j = -1 * (max.length / 2);
+    var index = 0;
+    var valid = true;
+
+    row.forEach((val) => {
+      if (filters[index] > val) {
+        valid = false;
+      }
+      index++;
+    })
+    index = 0;
+
+    if (valid) {
+
+
+      row.forEach((val) => {
+        var row = []
+        values.push((j / (max.length)) * w);
+        var new_val = val / max[index];
+        values.push(new_val * h);
+        j++;
+        index++;
+      })
+      values.push(undefined);
+      values.push(undefined);
+    }
+  }
+  console.log(values);
+  return values;
+}
 export function drawX() {
-  console.log("drawing");
-  let urlToFloatFile = "./xData.txt";
+  let urlToFloatFile = "./nutrients.json";
   let request = new XMLHttpRequest();
 
   request.open("GET", urlToFloatFile, true);
-  request.responseType = "arraybuffer";
+  request.responseType = "json";
 
   request.onload = function () {
-    var w = window.innerWidth;
-    var h = window.innerHeight;
-
-    console.log(w,h);
-    
+    var w = 1;
+    var h = 1;
     var data = this.response;
-    
-    for (var i = 0; i < data.length; i++)
-    {
-      if (i % 2 == 0)
-      {
+    data = cleanData(data)
+
+
+    for (var i = 0; i < data.length; i++) {
+      if (i % 2 == 0) {
         data[i] = data[i] * w;
       }
-      else
-      {
+      else {
         data[i] = data[i] * h;
       }
     }
-    var results = new Float32Array(data);
     console.log(data);
+    var results = new Float32Array(data);
     CreateLineStrips(results);
   };
   request.send();
