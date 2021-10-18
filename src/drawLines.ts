@@ -236,13 +236,12 @@ function isValidLine() {
 function cleanData(data: Array<JSON>) {
 
   // Help scaling for making it full width need to figure out what exact values are the best
-  var w = 2.0;
+  var w = 2.5;
   var h = 7.5;
   var values = [];
-  var count = data.length * .25;
+  var count = data.length;
   var max = Object.values(data[0])
   max = max.slice(2, max.length);
-  console.log("columns", Object.keys(data[0]));
 
   for (var i = 0; i < count; i++) {
     var row = Object.values(data[i])
@@ -255,7 +254,7 @@ function cleanData(data: Array<JSON>) {
 
     }
   }
-  console.log("max", max);
+
   for (var i = 0; i < count; i++) {
     var row = Object.values(data[i])
     var row = row.slice(2, row.length);
@@ -286,7 +285,6 @@ function cleanData(data: Array<JSON>) {
       values.push(undefined);
     }
   }
-  console.log(values);
   return values;
 }
 export function drawX() {
@@ -301,17 +299,6 @@ export function drawX() {
     var h = 1;
     var data = this.response;
     data = cleanData(data)
-
-
-    for (var i = 0; i < data.length; i++) {
-      if (i % 2 == 0) {
-        data[i] = data[i] * w;
-      }
-      else {
-        data[i] = data[i] * h;
-      }
-    }
-    console.log(data);
     var results = new Float32Array(data);
     CreateLineStrips(results);
   };
