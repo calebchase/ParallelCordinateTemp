@@ -1,15 +1,25 @@
 var filtersAdded = false;
 var filters = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 var names = [
-  'protein (g)', 'calcium (g)',
-  'sodium (g)', 'fiber (g)',
-  'vitaminc (g)', 'potassium (g)',
-  'carbohydrate (g)', 'sugars (g)',
-  'fat (g)', 'water (g)',
-  'calories', 'saturated (g)',
-  'monounsat (g)', 'polyunsat (g)']
+  "protein (g)",
+  "calcium (g)",
+  "sodium (g)",
+  "fiber (g)",
+  "vitaminc (g)",
+  "potassium (g)",
+  "carbohydrate (g)",
+  "sugars (g)",
+  "fat (g)",
+  "water (g)",
+  "calories",
+  "saturated (g)",
+  "monounsat (g)",
+  "polyunsat (g)",
+];
 var max: Array<number> = [
-  82.4, 2.24, 38.758, 53.1, 0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6, 83.689, 74.623];
+  82.4, 2.24, 38.758, 53.1, 0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6,
+  83.689, 74.623,
+];
 var data;
 
 function CreateGPUBufferFloat32(device: GPUDevice, data: Float32Array) {
@@ -36,7 +46,7 @@ function CreateGPUBufferIndirect(device: GPUDevice, data: Uint32Array) {
 function createFilter(name: string, max: number, index: number) {
   var filters_div = document.getElementById("filters");
   var filter = document.createElement("input");
-  filter.type = ("range");
+  filter.type = "range";
   filter.id = name;
   filter.name = name;
   filter.min = "0";
@@ -45,7 +55,7 @@ function createFilter(name: string, max: number, index: number) {
   filter.onchange = function (e) {
     filters[index] = Number.parseFloat(filter.value);
     drawX();
-  }
+  };
 
   filters_div?.appendChild(filter);
 
@@ -53,14 +63,9 @@ function createFilter(name: string, max: number, index: number) {
 
   label.innerHTML = name;
 
-
   filters_div?.appendChild(label);
-
-
 }
 function createForms() {
-
-
   for (var i: number = 0; i < max.length; i++) {
     createFilter(names[i], max[i], i);
   }
@@ -77,7 +82,6 @@ async function InitGPU() {
   if (!filtersAdded) {
     createForms();
   }
-
 
   let devicePixelRatio = window.devicePixelRatio || 1;
   let size = [
@@ -103,12 +107,20 @@ function shaders() {
   [[stage(vertex)]]
   fn main([[location(0)]] pos: vec4<f32>, [[location(1)]] color: vec4<f32>) -> Output {
     var output: Output;
-    
-    output.Position = pos;
-    output.vColor = color;
 
-  
-    output.Position.y = pos.y / 4.0 - 1.0;
+    var maxX = 13.0;
+    var maxY: array<f32, 14> = array<f32, 14>(
+      88.32, 7.364, 38.758, 79.0, 2.4, 16.5, 100.0, 99.8, 100.0, 100.0, 902.0, 95.6, 83.689, 74.623
+    );
+
+    var xRenderRange : array<f32, 2> = array<f32, 2>(-0.7, .95);
+    var yRenderRange : array<f32, 2> = array<f32, 2>(-0.9, .9);
+    
+    output.vColor = color;
+    output.Position = pos;
+    output.Position.y = pos.y / (maxY[i32(pos.x)] / (yRenderRange[1] - yRenderRange[0])) + yRenderRange[0];
+    output.Position.x = pos.x / (maxX / (xRenderRange[1] - xRenderRange[0])) + xRenderRange[0];
+
     return output;
   }`;
 
@@ -195,7 +207,7 @@ let CreateLineStrips = async (lineStrips: Float32Array) => {
   let gpu = await InitGPU();
   let device = gpu.device;
 
-  let colorData = new Float32Array([.5, .5, .5]);
+  let colorData = new Float32Array([0.5, 0.5, 0.5]);
 
   let commandEncoder = device.createCommandEncoder();
   let textureView = gpu.context.getCurrentTexture().createView();
@@ -227,60 +239,48 @@ let CreateLineStrips = async (lineStrips: Float32Array) => {
   device.queue.submit([commandEncoder.finish()]);
 };
 
-
 function isValidLine() {
-
   return true;
 }
 
 function cleanData(data: Array<JSON>) {
-
   // Help scaling for making it full width need to figure out what exact values are the best
-  var w = 2.5;
-  var h = 7.5;
   var values = [];
   var count = data.length;
-  var max = Object.values(data[0])
+  var max = Object.values(data[0]);
   max = max.slice(2, max.length);
 
   for (var i = 0; i < count; i++) {
-    var row = Object.values(data[i])
+    var row = Object.values(data[i]);
     var row = row.slice(2, row.length);
 
     for (var j = 0; j < row.length; j++) {
       if (row[j] !== null && row[j] !== undefined) {
         max[j] = Math.max(row[j], max[j]);
       }
-
     }
   }
 
   for (var i = 0; i < count; i++) {
-    var row = Object.values(data[i])
+    var row = Object.values(data[i]);
     var row = row.slice(2, row.length);
-    var j = -1 * (max.length / 2);
-    var index = 0;
+    var j = 0;
     var valid = true;
 
     row.forEach((val) => {
-      if (filters[index] > val) {
+      if (filters[j] > val) {
         valid = false;
       }
-      index++;
-    })
-    index = 0;
+      j++;
+    });
 
+    j = 0;
     if (valid) {
-
-
       row.forEach((val) => {
-        var row = []
-        values.push((j / (max.length)) * w);
-        var new_val = val / max[index];
-        values.push(new_val * h);
+        values.push(j);
+        values.push(val);
         j++;
-        index++;
-      })
+      });
       values.push(undefined);
       values.push(undefined);
     }
@@ -298,7 +298,7 @@ export function drawX() {
     var w = 1;
     var h = 1;
     var data = this.response;
-    data = cleanData(data)
+    data = cleanData(data);
     var results = new Float32Array(data);
     CreateLineStrips(results);
   };
