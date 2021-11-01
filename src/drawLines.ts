@@ -270,7 +270,7 @@ function getPipline(device: GPUDevice, gpu: any) {
           attributes: [
             {
               shaderLocation: 1,
-              format: "float32x3",
+              format: "float32x4",
               offset: 0,
             },
           ],
@@ -285,6 +285,18 @@ function getPipline(device: GPUDevice, gpu: any) {
       targets: [
         {
           format: gpu.format as GPUTextureFormat,
+          blend: {
+            color: {
+              operation: "add",
+              srcFactor: "one",
+              dstFactor: "one-minus-src-alpha",
+            },
+            alpha: {
+              operation: "max",
+              srcFactor: "one",
+              dstFactor: "one-minus-dst",
+            },
+          },
         },
       ],
     },
@@ -301,7 +313,7 @@ let CreateLineStrips = async (lineStrips: Float32Array, frame: any) => {
   let gpu = await InitGPU();
   let device = gpu.device;
 
-  let colorDataGrey = new Float32Array([0.5, 0.5, 0.5]);
+  let colorDataGrey = new Float32Array([0.08, 0.08, 0.08, 0.2]);
   let colorDataBlack = new Float32Array([0, 0, 1.0]);
   let uniDataInit = createArrayUni();
 
