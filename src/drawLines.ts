@@ -1,5 +1,3 @@
-import { create } from "domain";
-
 var filtersAdded = false;
 var filters = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 var names = [
@@ -22,7 +20,6 @@ var max: Array<number> = [
   82.4, 2.24, 38.758, 53.1, 0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6,
   83.689, 74.623,
 ];
-var data;
 
 function CreateGPUBufferFloat32(device: GPUDevice, data: Float32Array) {
   let buffer = device.createBuffer({
@@ -46,16 +43,16 @@ function CreateGPUBufferIndirect(device: GPUDevice, data: Uint32Array) {
   return buffer;
 }
 
-function createUniformBuffer(device: GPUDevice, data: Float32Array) {
-  let buffer = device.createBuffer({
-    size: data.byteLength,
-    usage: GPUBufferUsage.UNIFORM,
-    mappedAtCreation: true,
-  });
-  new Float32Array(buffer.getMappedRange()).set(data);
-  buffer.unmap();
-  return buffer;
-}
+// function createUniformBuffer(device: GPUDevice, data: Float32Array) {
+//   let buffer = device.createBuffer({
+//     size: data.byteLength,
+//     usage: GPUBufferUsage.UNIFORM,
+//     mappedAtCreation: true,
+//   });
+//   new Float32Array(buffer.getMappedRange()).set(data);
+//   buffer.unmap();
+//   return buffer;
+// }
 
 function createFilter(name: string, max: number, index: number) {
   var filters_div = document.getElementById("filters");
@@ -66,7 +63,7 @@ function createFilter(name: string, max: number, index: number) {
   filter.min = "0";
   filter.value = "0";
   filter.max = max.toString();
-  filter.onchange = function (e) {
+  filter.onchange = function () {
     filters[index] = Number.parseFloat(filter.value);
     drawX();
   };
@@ -91,7 +88,6 @@ async function InitGPU() {
   let adapter = await navigator.gpu?.requestAdapter();
   let device = (await adapter?.requestDevice()) as GPUDevice;
   let context = canvas.getContext("webgpu") as unknown as GPUCanvasContext;
-  let filters_div = document.getElementById("filters");
 
   if (!filtersAdded) {
     createForms();
@@ -125,8 +121,10 @@ function shaders() {
   [[group(0), binding(0)]] var<uniform> uniforms: Uniforms;
 
   [[stage(vertex)]]
-  fn main([[location(0)]] pos: vec4<f32>, [[location(1)]] color: vec4<f32>) -> Output {
+  fn main([[location(0)]] posX: f32, [[location(1)]] posY: f32, [[location(2)]] color: vec4<f32>) -> Output {
     var output: Output;
+
+    var pos: vec2<f32> = vec2<f32>(posX , posY);
 
     var maxX = uniforms.in[0];
     var xRenderRange: array<f32, 2> = array<f32, 2>(uniforms.in[1], uniforms.in[2]);
@@ -134,10 +132,11 @@ function shaders() {
     var offset: i32 = 5;
 
     output.vColor = color;
-    output.Position = pos;
 
     output.Position.y = pos.y / (uniforms.in[i32(round(pos.x)) + offset] / (yRenderRange[1] - yRenderRange[0])) + yRenderRange[0];
     output.Position.x = pos.x / (maxX / (xRenderRange[1] - xRenderRange[0])) + xRenderRange[0];
+    output.Position.z = 0.0;
+    output.Position.w = 1.0;
 
     return output;
   }`;
@@ -198,24 +197,10 @@ function createUniBindGroup(
     }
   }
   let size = uniData.length * 4;
-  console.log(uniData);
 
   const uniformBuffer = device.createBuffer({
     size: size,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  let uniDataBuffer = createUniformBuffer(device, new Float32Array(uniData));
-  const bindGroupLayout = device.createBindGroupLayout({
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.VERTEX,
-        buffer: {
-          type: "uniform",
-        },
-      },
-    ],
   });
 
   const uniBindGroup = device.createBindGroup({
@@ -255,11 +240,21 @@ function getPipline(device: GPUDevice, gpu: any) {
       entryPoint: "main",
       buffers: [
         {
-          arrayStride: 8,
+          arrayStride: 4,
           attributes: [
             {
               shaderLocation: 0,
-              format: "float32x2",
+              format: "float32",
+              offset: 0,
+            },
+          ],
+        },
+        {
+          arrayStride: 4,
+          attributes: [
+            {
+              shaderLocation: 1,
+              format: "float32",
               offset: 0,
             },
           ],
@@ -269,7 +264,7 @@ function getPipline(device: GPUDevice, gpu: any) {
           arrayStride: 0,
           attributes: [
             {
-              shaderLocation: 1,
+              shaderLocation: 2,
               format: "float32x4",
               offset: 0,
             },
@@ -309,12 +304,11 @@ function getPipline(device: GPUDevice, gpu: any) {
   return pipeline;
 }
 
-let CreateLineStrips = async (lineStrips: Float32Array, frame: any) => {
+let CreateLineStrips = async (data: any) => {
   let gpu = await InitGPU();
   let device = gpu.device;
 
   let colorDataGrey = new Float32Array([0.08, 0.08, 0.08, 0.2]);
-  let colorDataBlack = new Float32Array([0, 0, 1.0]);
   let uniDataInit = createArrayUni();
 
   let commandEncoder = device.createCommandEncoder();
@@ -333,23 +327,21 @@ let CreateLineStrips = async (lineStrips: Float32Array, frame: any) => {
 
   let pipeline = getPipline(device, gpu);
 
-  let windowBuffeer = CreateGPUBufferFloat32(device, frame);
-  let indirectParameters = getIndirectParameters(lineStrips.length / 2);
+  let indirectParameters = getIndirectParameters(data.valX.length);
   let indrectBuffer = CreateGPUBufferIndirect(device, indirectParameters);
-  let vertexBuffer = CreateGPUBufferFloat32(device, lineStrips);
+  let vertexBufferX = CreateGPUBufferFloat32(device, data.valX);
+  let vertexBufferY = CreateGPUBufferFloat32(device, data.valY);
   let uniBindGroup = createUniBindGroup(device, pipeline, uniDataInit);
 
   let colorBufferGrey = CreateGPUBufferFloat32(device, colorDataGrey);
-  let colorBufferBlack = CreateGPUBufferFloat32(device, colorDataBlack);
 
   renderPass.setPipeline(pipeline);
-  renderPass.setBindGroup(0, uniBindGroup);
-  renderPass.setVertexBuffer(0, vertexBuffer);
-  renderPass.setVertexBuffer(1, colorBufferGrey);
-  renderPass.drawIndirect(indrectBuffer, 0);
 
-  renderPass.setVertexBuffer(0, windowBuffeer);
-  renderPass.setVertexBuffer(1, colorBufferBlack);
+  renderPass.setBindGroup(0, uniBindGroup);
+  renderPass.setVertexBuffer(0, vertexBufferX);
+  renderPass.setVertexBuffer(1, vertexBufferY);
+  renderPass.setVertexBuffer(2, colorBufferGrey);
+
   renderPass.drawIndirect(indrectBuffer, 0);
 
   renderPass.endPass();
@@ -358,7 +350,8 @@ let CreateLineStrips = async (lineStrips: Float32Array, frame: any) => {
 
 function cleanData(data: Array<JSON>) {
   // Help scaling for making it full width need to figure out what exact values are the best
-  var values = [];
+  var valY = [];
+  var valX = [];
   var count = data.length;
   var max = Object.values(data[0]);
   max = max.slice(2, max.length);
@@ -390,25 +383,16 @@ function cleanData(data: Array<JSON>) {
     j = 0;
     if (valid) {
       row.forEach((val) => {
-        values.push(j);
-        values.push(val);
+        valX.push(j);
+        valY.push(val);
         j++;
       });
-      values.push(undefined);
-      values.push(undefined);
+      valX.push(undefined);
+      valY.push(undefined);
     }
   }
 
-  let frame = [];
-  frame.push(0.8, 7);
-  frame.push(1.2, 7);
-  frame.push(1.2, 5);
-  frame.push(0.8, 5);
-  frame.push(0.8, 7);
-  frame.push(undefined);
-  frame.push(undefined);
-
-  return { values: values, frame: frame };
+  return { valX: valX, valY: valY };
 }
 export function drawX() {
   let urlToFloatFile = "./nutrients.json";
@@ -420,9 +404,12 @@ export function drawX() {
   request.onload = function () {
     var data = this.response;
     data = cleanData(data);
-    var results = new Float32Array(data.values);
-    var frame = new Float32Array(data.frame);
-    CreateLineStrips(results, frame);
+    console.log(data);
+
+    data.valX = new Float32Array(data.valX);
+    data.valY = new Float32Array(data.valY);
+
+    CreateLineStrips(data);
   };
   request.send();
 }
