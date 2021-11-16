@@ -315,9 +315,6 @@ new Float32Array(arrayBufferdataMatrix).set(data);
 gpuBufferdataMatrix.unmap();
 
 // Filter Buffer
-
-console.log("num rows", data[0]);
-console.log("num rows", ( data[0] - 2) / filters[0]);
 const filterArray = new Float32Array(filters)
 const gpuBufferFilterMatrix = device.createBuffer({
   mappedAtCreation: true,
@@ -477,7 +474,7 @@ device.queue.submit([gpuCommands]);
 // Read buffer.
 await gpuReadBuffer.mapAsync(GPUMapMode.READ);
 const arrayBuffer = gpuReadBuffer.getMappedRange();
-console.log(new Float32Array(arrayBuffer));
+
 
 
   let colorData = new Float32Array([.5, .5, .5]);
