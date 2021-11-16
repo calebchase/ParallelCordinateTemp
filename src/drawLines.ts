@@ -1,5 +1,5 @@
 var filtersAdded = false;
-var filters = [15,1,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,82.4, 2.24, 38.758, 53.1, 0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6, 83.689, 74.623, -1];
+var filters = [15,1,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,88.4, 2.24, 38.758, 53.1, 0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6, 83.689, 74.623, -1];
 
 var names = [
   'protein (g)', 'calcium (g)',
@@ -56,7 +56,9 @@ function createFilter(name: string, max: number, index: number) {
   filter.value = "0";
   filter.max = max.toString();
   filter.onchange = function (e) {
+    
     filters[index + 2] = Number.parseFloat(filter.value);
+    console.log(filters);
     drawX();
   };
 
@@ -110,6 +112,8 @@ function shaders() {
   [[block]] struct Uniforms {
     in: [[stride(16)]]array<f32, 19>;
   };
+
+  
 
   [[group(0), binding(0)]] var<uniform> uniforms: Uniforms;
 
@@ -378,7 +382,7 @@ const shaderModule = device.createShaderModule({
 
       for (var k = 0u; k < u32(filterMatrix.size.x - 1.0); k = k + 1u)
       {
-        if (dataMatrix.numbers[dataIndex] < ( filterMatrix.numbers[k] / filterMatrix.numbers[u32(filterMatrix.size.x) + k]))
+        if (dataMatrix.numbers[dataIndex] < ( filterMatrix.numbers[k] / filterMatrix.numbers[u32(filterMatrix.size.x + 1.0) + k]))
         {
           valid = 1;
         }
@@ -477,6 +481,7 @@ const arrayBuffer = gpuReadBuffer.getMappedRange();
 
 
 
+
   let colorData = new Float32Array([.5, .5, .5]);
 
   let commandEncoder = device.createCommandEncoder();
@@ -513,6 +518,7 @@ const arrayBuffer = gpuReadBuffer.getMappedRange();
   renderPass.drawIndirect(indrectBuffer, 0);
   // draw green
   if (!init) {
+    console.log(new Float32Array(arrayBuffer));
     let vertexBufferXFilter = CreateGPUBufferFloat32(device, new Float32Array(arrayBuffer));
     let vertexBufferYFilter = CreateGPUBufferFloat32(device, indices);
     let colorBufferGreen = CreateGPUBufferFloat32(device, colorDataGreen);
@@ -555,9 +561,10 @@ function prepareData(data: Array<JSON>)
 
     for (var j = 0; j < row.length; j++)
     {
-      var index = ((- row.length / 2) + j );
-      xValues.push(index * 2.5);
-      yValues.push(row[j] * 7.5);
+      max[j] = Math.max(max[j], row[j]);
+      var index = j / row.length;
+      xValues.push(index * 2);
+      yValues.push(row[j]);
       if (j + 1 === row.length)
       {
         xValues.push(0.0);
@@ -565,6 +572,8 @@ function prepareData(data: Array<JSON>)
       }
     }
   }
+
+  console.log(max);
   return {yValues: yValues,
           xValues: xValues
   };
@@ -627,18 +636,16 @@ export function drawX() {
   request.responseType = "json";
 
   request.onload = function () {
-    var w = 1;
-    var h = 1;
     var data = this.response;
     var buffer = prepareData(data);
     let filterData: { valX: any; valY: any } = cleanData(data, true);
-    data = cleanData(data, false);
+   
 
-    data.valX = new Float32Array(data.valX);
-    data.valY = new Float32Array(data.valY);
+    data.valX = new Float32Array(buffer.yValues);
+    data.valY = new Float32Array(buffer.xValues);
 
-    filterData.valX = new Float32Array(filterData.valX);
-    filterData.valY = new Float32Array(filterData.valY);
+    filterData.valX = new Float32Array(buffer.xValues);
+    filterData.valY = new Float32Array(buffer.yValues);
 
     CreateLineStrips(new Float32Array(buffer.yValues),new Float32Array(buffer.xValues), init, filterData);
     init = false;
