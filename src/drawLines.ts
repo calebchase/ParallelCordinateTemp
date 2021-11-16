@@ -118,25 +118,24 @@ function shaders() {
   [[block]] struct Uniforms {
     in: [[stride(16)]]array<f32, 19>;
   };
+
   [[group(0), binding(0)]] var<uniform> uniforms: Uniforms;
 
   [[stage(vertex)]]
   fn main([[location(0)]] posX: f32, [[location(1)]] posY: f32, [[location(2)]] color: vec4<f32>) -> Output {
     var output: Output;
 
-    var pos: vec2<f32> = vec2<f32>(posX , posY);
-
     var maxX = uniforms.in[0];
     var xRenderRange: array<f32, 2> = array<f32, 2>(uniforms.in[1], uniforms.in[2]);
     var yRenderRange: array<f32, 2> = array<f32, 2>(uniforms.in[3], uniforms.in[4]);
     var offset: i32 = 5;
 
-    output.vColor = color;
-
-    output.Position.y = pos.y / (uniforms.in[i32(round(pos.x)) + offset] / (yRenderRange[1] - yRenderRange[0])) + yRenderRange[0];
-    output.Position.x = pos.x / (maxX / (xRenderRange[1] - xRenderRange[0])) + xRenderRange[0];
+    output.Position.y = posY / (uniforms.in[i32(posX) + offset] / (yRenderRange[1] - yRenderRange[0])) + yRenderRange[0];
+    output.Position.x = posX / (maxX / (xRenderRange[1] - xRenderRange[0])) + xRenderRange[0];
     output.Position.z = 0.0;
     output.Position.w = 1.0;
+
+    output.vColor = color;
 
     return output;
   }`;
@@ -283,13 +282,13 @@ function getPipline(device: GPUDevice, gpu: any) {
           blend: {
             color: {
               operation: "add",
-              srcFactor: "one",
+              srcFactor: "src-alpha",
               dstFactor: "one-minus-src-alpha",
             },
             alpha: {
-              operation: "max",
+              operation: "add",
               srcFactor: "one",
-              dstFactor: "one-minus-dst",
+              dstFactor: "one-minus-src-alpha",
             },
           },
         },
@@ -304,11 +303,12 @@ function getPipline(device: GPUDevice, gpu: any) {
   return pipeline;
 }
 
-let CreateLineStrips = async (data: any) => {
+let CreateLineStrips = async (data: any, filterData: any, init: boolean) => {
   let gpu = await InitGPU();
   let device = gpu.device;
 
-  let colorDataGrey = new Float32Array([0.08, 0.08, 0.08, 0.2]);
+  let colorDataGrey = new Float32Array([0, 0, 0, 0.2]);
+  let colorDataGreen = new Float32Array([0, 1, 0, 0.2]);
   let uniDataInit = createArrayUni();
 
   let commandEncoder = device.createCommandEncoder();
@@ -329,10 +329,10 @@ let CreateLineStrips = async (data: any) => {
 
   let indirectParameters = getIndirectParameters(data.valX.length);
   let indrectBuffer = CreateGPUBufferIndirect(device, indirectParameters);
-  let vertexBufferX = CreateGPUBufferFloat32(device, data.valX);
-  let vertexBufferY = CreateGPUBufferFloat32(device, data.valY);
   let uniBindGroup = createUniBindGroup(device, pipeline, uniDataInit);
 
+  let vertexBufferX = CreateGPUBufferFloat32(device, data.valX);
+  let vertexBufferY = CreateGPUBufferFloat32(device, data.valY);
   let colorBufferGrey = CreateGPUBufferFloat32(device, colorDataGrey);
 
   renderPass.setPipeline(pipeline);
@@ -343,12 +343,24 @@ let CreateLineStrips = async (data: any) => {
   renderPass.setVertexBuffer(2, colorBufferGrey);
 
   renderPass.drawIndirect(indrectBuffer, 0);
+  // draw green
+  if (!init) {
+    let vertexBufferXFilter = CreateGPUBufferFloat32(device, filterData.valX);
+    let vertexBufferYFilter = CreateGPUBufferFloat32(device, filterData.valY);
+    let colorBufferGreen = CreateGPUBufferFloat32(device, colorDataGreen);
+
+    renderPass.setBindGroup(0, uniBindGroup);
+    renderPass.setVertexBuffer(0, vertexBufferXFilter);
+    renderPass.setVertexBuffer(1, vertexBufferYFilter);
+    renderPass.setVertexBuffer(2, colorBufferGreen);
+    renderPass.drawIndirect(indrectBuffer, 0);
+  }
 
   renderPass.endPass();
   device.queue.submit([commandEncoder.finish()]);
 };
 
-function cleanData(data: Array<JSON>) {
+function cleanData(data: Array<JSON>, doFilter: boolean) {
   // Help scaling for making it full width need to figure out what exact values are the best
   var valY = [];
   var valX = [];
@@ -374,7 +386,7 @@ function cleanData(data: Array<JSON>) {
     var valid = true;
 
     row.forEach((val) => {
-      if (filters[j] > val) {
+      if (filters[j] > val && doFilter) {
         valid = false;
       }
       j++;
@@ -394,6 +406,8 @@ function cleanData(data: Array<JSON>) {
 
   return { valX: valX, valY: valY };
 }
+
+let init = true;
 export function drawX() {
   let urlToFloatFile = "./nutrients.json";
   let request = new XMLHttpRequest();
@@ -402,14 +416,18 @@ export function drawX() {
   request.responseType = "json";
 
   request.onload = function () {
-    var data = this.response;
-    data = cleanData(data);
-    console.log(data);
+    let data = this.response;
+    let filterData: { valX: any; valY: any } = cleanData(data, true);
+    data = cleanData(data, false);
 
     data.valX = new Float32Array(data.valX);
     data.valY = new Float32Array(data.valY);
 
-    CreateLineStrips(data);
+    filterData.valX = new Float32Array(filterData.valX);
+    filterData.valY = new Float32Array(filterData.valY);
+
+    CreateLineStrips(data, filterData, init);
+    init = false;
   };
   request.send();
 }
