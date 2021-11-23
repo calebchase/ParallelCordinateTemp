@@ -391,7 +391,7 @@ let CreateLineStrips = async (
   });
 
   const arrayBufferdataMatrix = gpuBufferdataMatrix.getMappedRange();
-  new Float32Array(arrayBufferdataMatrix).set(data);
+  new Float32Array(arrayBufferdataMatrix).set(indices);
   gpuBufferdataMatrix.unmap();
 
   // Filter Buffer
@@ -491,6 +491,7 @@ let CreateLineStrips = async (
   // Read buffer.
   await gpuReadBuffer.mapAsync(GPUMapMode.READ);
   const arrayBuffer = gpuReadBuffer.getMappedRange();
+  
 
   let colorData = new Float32Array([0.5, 0.5, 0.5]);
 
@@ -526,13 +527,14 @@ let CreateLineStrips = async (
   renderPass.setVertexBuffer(2, colorBufferGrey);
 
   renderPass.drawIndirect(indrectBuffer, 0);
+  
   // draw green
   if (!init) {
     let vertexBufferXFilter = CreateGPUBufferFloat32(
       device,
-      new Float32Array(arrayBuffer)
+      data,
     );
-    let vertexBufferYFilter = CreateGPUBufferFloat32(device, indices);
+    let vertexBufferYFilter = CreateGPUBufferFloat32(device, new Float32Array(arrayBuffer));
     let colorBufferGreen = CreateGPUBufferFloat32(device, colorDataGreen);
 
     renderPass.setBindGroup(0, uniBindGroup);
@@ -646,6 +648,7 @@ export function drawX() {
     filterData.valX = new Float32Array(buffer.xValues);
     filterData.valY = new Float32Array(buffer.yValues);
 
+    
     CreateLineStrips(
       new Float32Array(buffer.xValues),
       new Float32Array(buffer.yValues),
