@@ -1,6 +1,6 @@
 var filtersAdded = false;
-var filters = [15,1,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,88.4, 2.24, 38.758, 53.1, 0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6, 83.689, 74.623, -1];
-
+var filters = [15,1,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,82.4, 2.24, 38.758, 53.1, 0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6, 83.689, 74.623, -1];
+var loaded = false;
 var names = [
   'protein (g)', 'calcium (g)',
   'sodium (g)', 'fiber (g)',
@@ -518,7 +518,6 @@ const arrayBuffer = gpuReadBuffer.getMappedRange();
   renderPass.drawIndirect(indrectBuffer, 0);
   // draw green
   if (!init) {
-    console.log(new Float32Array(arrayBuffer));
     let vertexBufferXFilter = CreateGPUBufferFloat32(device, new Float32Array(arrayBuffer));
     let vertexBufferYFilter = CreateGPUBufferFloat32(device, indices);
     let colorBufferGreen = CreateGPUBufferFloat32(device, colorDataGreen);
@@ -561,9 +560,9 @@ function prepareData(data: Array<JSON>)
 
     for (var j = 0; j < row.length; j++)
     {
-      max[j] = Math.max(max[j], row[j]);
-      var index = j / row.length;
-      xValues.push(index * 2);
+      max[j] = Math.max(max[j], row[j])
+      var index = j;
+      xValues.push(index);
       yValues.push(row[j]);
       if (j + 1 === row.length)
       {
@@ -572,8 +571,6 @@ function prepareData(data: Array<JSON>)
       }
     }
   }
-
-  console.log(max);
   return {yValues: yValues,
           xValues: xValues
   };
@@ -636,13 +633,14 @@ export function drawX() {
   request.responseType = "json";
 
   request.onload = function () {
+  
     var data = this.response;
     var buffer = prepareData(data);
     let filterData: { valX: any; valY: any } = cleanData(data, true);
    
 
-    data.valX = new Float32Array(buffer.yValues);
-    data.valY = new Float32Array(buffer.xValues);
+    data.valX = new Float32Array(buffer.xValues);
+    data.valY = new Float32Array(buffer.yValues);
 
     filterData.valX = new Float32Array(buffer.xValues);
     filterData.valY = new Float32Array(buffer.yValues);
