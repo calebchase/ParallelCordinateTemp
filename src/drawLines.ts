@@ -1,30 +1,6 @@
 var filtersAdded = false;
-var filters = [
-  15, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 82.4, 2.24, 38.758, 53.1,
-  0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6, 83.689, 74.623, -1,
-];
-var loaded = false;
-var names = [
-  "protein (g)",
-  "calcium (g)",
-  "sodium (g)",
-  "fiber (g)",
-  "vitaminc (g)",
-  "potassium (g)",
-  "carbohydrate (g)",
-  "sugars (g)",
-  "fat (g)",
-  "water (g)",
-  "calories",
-  "saturated (g)",
-  "monounsat (g)",
-  "polyunsat (g)",
-];
-var max = [
-  82.4, 2.24, 38.758, 53.1, 0.5667, 4.74, 89, 74.46, 100, 98.69, 902, 95.6,
-  83.689, 74.623,
-];
-var data;
+var filters: Array<number>;
+var names: Array<string>;
 
 function CreateGPUBufferFloat32(device: GPUDevice, data: Float32Array) {
   let buffer = device.createBuffer({
@@ -70,7 +46,6 @@ function createFilter(name: string, max: number, index: number) {
   filter.max = max.toString();
   filter.onchange = function (e) {
     filters[index + 2] = Number.parseFloat(filter.value);
-    console.log(filters);
     drawX();
   };
 
@@ -83,8 +58,8 @@ function createFilter(name: string, max: number, index: number) {
   filters_div?.appendChild(label);
 }
 function createForms() {
-  for (var i: number = 0; i < max.length; i++) {
-    createFilter(names[i], max[i], i);
+  for (var i: number = 0; i < filters[0]; i++) {
+    createFilter(names[i], filters[2 + filters[0] + i], i);
   }
 
   filtersAdded = true;
@@ -232,10 +207,7 @@ function getIndirectParameters(count: number) {
 }
 
 function createArrayUni() {
-  let uniDataInit = [
-    88.32, 7.364, 38.758, 79.0, 2.4, 16.5, 100.0, 99.8, 100.0, 100.0, 902.0,
-    95.6, 83.689, 74.623,
-  ];
+  let uniDataInit = filters.slice(2 + filters[0], filters.length);
 
   let xRenderRange = [-0.7, 0.95];
   let yRenderRange = [-0.9, 0.9];
@@ -406,16 +378,6 @@ let CreateLineStrips = async (
   new Float32Array(arrayBufferFilterMatrix).set(filterArray);
   gpuBufferFilterMatrix.unmap();
 
-  const maxArray = new Float32Array(max);
-  const gpuBufferMaxMatrix = device.createBuffer({
-    mappedAtCreation: true,
-    size: maxArray.byteLength,
-    usage: GPUBufferUsage.STORAGE,
-  });
-
-  const arrayBufferMaxMatrix = gpuBufferMaxMatrix.getMappedRange();
-  new Float32Array(arrayBufferMaxMatrix).set(maxArray);
-  gpuBufferFilterMatrix.unmap();
   // Result Matrix
 
   const resultMatrixBufferSize =
@@ -491,7 +453,7 @@ let CreateLineStrips = async (
   // Read buffer.
   await gpuReadBuffer.mapAsync(GPUMapMode.READ);
   const arrayBuffer = gpuReadBuffer.getMappedRange();
-  
+
 
   let colorData = new Float32Array([0.5, 0.5, 0.5]);
 
@@ -527,7 +489,7 @@ let CreateLineStrips = async (
   renderPass.setVertexBuffer(2, colorBufferGrey);
 
   renderPass.drawIndirect(indrectBuffer, 0);
-  
+
   // draw green
   if (!init) {
     let vertexBufferXFilter = CreateGPUBufferFloat32(
@@ -553,81 +515,62 @@ function isValidLine() {
 }
 
 function prepareData(data: Array<JSON>) {
-  var categories = Object.values(data[0]);
-  categories = categories.slice(2, categories.length);
+  // Getting Feature names for the forms
+  var categories = Object.keys(data[0]);
 
-  // Array starts with #rows and #columns
+  if (names === null || names === undefined) {
+    names = categories;
+
+  }
+
+  // Setting up Filters Array 
+  // filters[length, numDimensions, ...values..., ...maxValues...]
+  if (filters === null || filters === undefined) {
+    filters = new Array(2 + 2 * categories.length).fill(0);
+    filters[0] = categories.length;
+    filters[1] = 1;
+  }
+
+  // Setting up yValues array
+  // [length, numDimensions,...values...]
   var yValues = [];
-  var xValues = [];
-  xValues.push(data.length * categories.length + 1);
-  xValues.push(1);
   yValues.push(data.length);
   yValues.push(categories.length + 1);
 
+  // Setting up xValues array
+  // [length, numDimensions,...values...]
+  var xValues = [];
+  xValues.push(data.length * categories.length + 1);
+  xValues.push(1);
+
+
+  // Going through each row and column in the data
   for (var i = 0; i < data.length; i++) {
     var row = Object.values(data[i]);
-    row = row.slice(2, row.length);
 
     for (var j = 0; j < row.length; j++) {
-      max[j] = Math.max(max[j], row[j]);
-      var index = j;
-      xValues.push(index);
+
+      // Updating the maxValues
+      filters[2 + categories.length + j] = Math.max(filters[filters[0] + 2 + j], row[j]);
+
+      // xValues = columnNum
+      // yValues = value 
+      xValues.push(j);
       yValues.push(row[j]);
+
+      // Generates random data
+      // yValues.push(Math.random() * filters[filters[0] + 2 + j]);
       if (j + 1 === row.length) {
         xValues.push(0.0);
         yValues.push(0.0);
       }
     }
   }
+
   return { yValues: yValues, xValues: xValues };
 }
 
-function cleanData(data: Array<JSON>, doFilter: boolean) {
-  // Help scaling for making it full width need to figure out what exact values are the best
-  var valY = [];
-  var valX = [];
-  var count = data.length;
-  var max = Object.values(data[0]);
-  max = max.slice(2, max.length);
 
-  for (var i = 0; i < count; i++) {
-    var row = Object.values(data[i]);
-    var row = row.slice(2, row.length);
-
-    for (var j = 0; j < row.length; j++) {
-      if (row[j] !== null && row[j] !== undefined) {
-        max[j] = Math.max(row[j], max[j]);
-      }
-    }
-  }
-
-  for (var i = 0; i < count; i++) {
-    var row = Object.values(data[i]);
-    var row = row.slice(2, row.length);
-    var j = 0;
-    var valid = true;
-
-    row.forEach((val) => {
-      if (filters[j] > val && doFilter) {
-        valid = false;
-      }
-      j++;
-    });
-
-    j = 0;
-    if (valid) {
-      row.forEach((val) => {
-        valX.push(j);
-        valY.push(val);
-        j++;
-      });
-      valX.push(undefined);
-      valY.push(undefined);
-    }
-  }
-
-  return { valX: valX, valY: valY };
-}
 
 let init = true;
 export function drawX() {
@@ -640,15 +583,14 @@ export function drawX() {
   request.onload = function () {
     var data = this.response;
     var buffer = prepareData(data);
-    let filterData: { valX: any; valY: any } = cleanData(data, true);
+
 
     data.valX = new Float32Array(buffer.xValues);
     data.valY = new Float32Array(buffer.yValues);
 
-    filterData.valX = new Float32Array(buffer.xValues);
-    filterData.valY = new Float32Array(buffer.yValues);
+    let filterData = data;
 
-    
+
     CreateLineStrips(
       new Float32Array(buffer.xValues),
       new Float32Array(buffer.yValues),
