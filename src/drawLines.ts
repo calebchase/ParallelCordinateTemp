@@ -556,7 +556,8 @@ function prepareData(data: Array<JSON>) {
       // xValues = columnNum
       // yValues = value 
       xValues.push(j);
-      yValues.push(row[j]);
+      // yValues.push(row[j]);
+      yValues.push(Math.random() * filters[filters[0] + j + 2])
 
       // Generates random data
       // yValues.push(Math.random() * filters[filters[0] + 2 + j]);
